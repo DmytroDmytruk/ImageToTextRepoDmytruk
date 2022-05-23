@@ -310,10 +310,7 @@ namespace ImageToText
                     }
             }
             int quantized_value = (int)Math.Floor(pixel_value * currentQuantizationLevel / maxQuantizationLevel);
-            if (quantized_value.ToString() == null)
-            {
-                throw new Exception("Value is null");
-            }
+
             return quantized_value.ToString();
         }
 
@@ -331,6 +328,7 @@ namespace ImageToText
                 {
                     dialog.Filter = "Text|*.txt";
                     dialog.Title = "Save an Text File";
+                    dialog.FileName = "";
                     dialog.ShowDialog();
                     if (dialog.FileName != "")
                     {
