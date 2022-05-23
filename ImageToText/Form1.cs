@@ -43,6 +43,7 @@ namespace ImageToText
 
             pictureBox1.Image = loadedImage;
             button2.Enabled = true;
+            label6.Text = Path.GetFileNameWithoutExtension(filename);
         }
         private void loadText(string filename)
         {
@@ -320,6 +321,18 @@ namespace ImageToText
             text_form.Show();
         }
 
+        private string buildFileName(string filename)
+        {
+            // FileName_H/V_WxH.txt
+            bool isHorizontal = comboBox2.SelectedIndex == 0;
+            string directionString = isHorizontal ? "H" : "V";
+            string dimensionsString = isHorizontal 
+                ? $"{loadedImage.Width}x{loadedImage.Height}" 
+                : $"{loadedImage.Height}x{loadedImage.Width}";
+
+            return $"{filename}_{directionString}_{dimensionsString}.txt";
+        }
+
         private void button4_Click(object sender, EventArgs e)
         {
             if (!multiple)
@@ -328,7 +341,7 @@ namespace ImageToText
                 {
                     dialog.Filter = "Text|*.txt";
                     dialog.Title = "Save an Text File";
-                    dialog.FileName = "";
+                    dialog.FileName = buildFileName(label6.Text);
                     dialog.ShowDialog();
                     if (dialog.FileName != "")
                     {
