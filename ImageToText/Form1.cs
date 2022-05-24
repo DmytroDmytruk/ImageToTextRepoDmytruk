@@ -24,6 +24,21 @@ namespace ImageToText
         int maxQuantizationLevel;
         int currentQuantizationLevel = 16;
 
+        public enum Directions { Horizontal = 'H', Vertical = 'V' };
+        public enum ColorScheme { Red = 'R', Green = 'G', Blue = 'B', Monochrome = 'M'};
+        public struct Dimensions
+        {
+            public int Width { get; set; }
+            public int Height { get; set; }
+        };
+        public struct FileNameParsedData
+        {
+            public string Name { get; set; }
+            public Directions Direction { get; set; }
+            public ColorScheme ColorScheme { get; set; }
+            public Dimensions Dimensions { get; set; }
+
+        };
 
         string text;
 
@@ -45,6 +60,24 @@ namespace ImageToText
             button2.Enabled = true;
             label6.Text = Path.GetFileNameWithoutExtension(filename);
         }
+        private FileNameParsedData parseFileName(string filename)
+        {
+            string pattern = @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<width>\d+)x{1}(?<height>\d+)";
+            Regex regex = new Regex(pattern);
+            Match match = regex.Match(filename);
+
+            FileNameParsedData parsedData = new FileNameParsedData();
+            parsedData.Name = match.Groups["name"].Value;
+            parsedData.Direction = (Directions)Convert.ToChar(match.Groups["direction"].Value);
+            parsedData.ColorScheme = (ColorScheme)Convert.ToChar(match.Groups["color"].Value);
+
+            Dimensions parsedDimensions = new Dimensions();
+            parsedDimensions.Width = Convert.ToInt32(match.Groups["width"].Value);
+            parsedDimensions.Height = Convert.ToInt32(match.Groups["height"].Value);
+            parsedData.Dimensions = parsedDimensions;
+
+            return parsedData;
+        }
         private void loadText(string filename)
         {
             // FileName_H/V_WxH.txt
@@ -53,48 +86,43 @@ namespace ImageToText
             Regex regex = new Regex(pattern);
             Match match = regex.Match(filename);
 
-            char direction = Convert.ToChar(match.Groups["direction"].Value);
-            char colorScheme = Convert.ToChar(match.Groups["color"].Value);
-            bool isHorizontal = direction == 'H';
-            int width = Convert.ToInt32(match.Groups[isHorizontal ? "width" : "height"].Value);
-            int height = Convert.ToInt32(match.Groups[isHorizontal ? "height" : "width"].Value);
+            FileNameParsedData fileNameData = parseFileName(filename);
 
-
-            int[,] pixelValues = isHorizontal ? new int[width, height] : new int[height, width];
+            int[,] pixelValues = new int[fileNameData.Dimensions.Width, fileNameData.Dimensions.Height];
             string[] imageDataLines = File.ReadAllLines(filename);
             int[] pixelValuesFromFile = Array.ConvertAll(imageDataLines[0].Split(' '), str => Convert.ToInt32(str));
 
             int counter = 0;
-            for (int i = 0; i < width; i++)
+            for (int i = 0; i < fileNameData.Dimensions.Width; i++)
             {
-                for (int j = 0; j < height; j++)
+                for (int j = 0; j < fileNameData.Dimensions.Height; j++)
                 {
                     pixelValues[i, j] = pixelValuesFromFile[counter++];
                 }
             }
 
-            Bitmap bitmap = new Bitmap(width, height);
+            Bitmap bitmap = new Bitmap(fileNameData.Dimensions.Width, fileNameData.Dimensions.Height);
 
-            for (int x = 0; x < width; x++)
+            for (int x = 0; x < fileNameData.Dimensions.Width; x++)
             {
-                for (int y = 0; y < height; y++)
+                for (int y = 0; y < fileNameData.Dimensions.Height; y++)
                 {
                     Color color;
                     int value = 
                         (int)Math.Floor((double)(pixelValues[x, y] * maxQuantizationLevel / currentQuantizationLevel));
 
-                    switch (colorScheme)
+                    switch (fileNameData.ColorScheme)
                     {
-                        case 'R':
+                        case ColorScheme.Red:
                             color = Color.FromArgb(value, 0, 0);
                             break;
-                        case 'G':
+                        case ColorScheme.Green:
                             color = Color.FromArgb(0, value, 0);
                             break;
-                        case 'B':
+                        case ColorScheme.Blue:
                             color = Color.FromArgb(0, 0, value);
                             break;
-                        case 'M':
+                        case ColorScheme.Monochrome:
                             color = Color.FromArgb(value, value, value);
                             break;
                         default:
