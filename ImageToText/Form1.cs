@@ -62,6 +62,8 @@ namespace ImageToText
         }
         private FileNameParsedData parseFileName(string filename)
         {
+            // FileName_H/V_WxH.txt
+            // FileName_H/V_R/G/B/M_WxH.txt
             string pattern = @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<width>\d+)x{1}(?<height>\d+)";
             Regex regex = new Regex(pattern);
             Match match = regex.Match(filename);
@@ -80,12 +82,6 @@ namespace ImageToText
         }
         private void loadText(string filename)
         {
-            // FileName_H/V_WxH.txt
-            // FileName_H/V_R/G/B/M_WxH.txt
-            string pattern = @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<width>\d+)x{1}(?<height>\d+)";
-            Regex regex = new Regex(pattern);
-            Match match = regex.Match(filename);
-
             FileNameParsedData fileNameData = parseFileName(filename);
 
             int[,] pixelValues = new int[fileNameData.Dimensions.Width, fileNameData.Dimensions.Height];
@@ -236,7 +232,6 @@ namespace ImageToText
                     for (int j = 0; j < jj; j++)
                     {
                         Color color = loadedImage.GetPixel(i, j);
-                        //MessageBox.Show(color.R.ToString() + " " + color.G.ToString() + " " + color.B.ToString());
 
                         char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
                     }
@@ -249,7 +244,6 @@ namespace ImageToText
                     for (int i = 0; i < ii; i++)
                     {
                         Color color = loadedImage.GetPixel(i, j);
-                        //MessageBox.Show(color.R.ToString() + " " + color.G.ToString() + " " + color.B.ToString());
 
                         char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
                     }
