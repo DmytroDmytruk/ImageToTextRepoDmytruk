@@ -190,28 +190,27 @@
             // 
             // button6
             // 
-            this.button6.Location = new System.Drawing.Point(126, 753);
+            this.button6.Location = new System.Drawing.Point(18, 726);
             this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(139, 46);
+            this.button6.Size = new System.Drawing.Size(331, 37);
             this.button6.TabIndex = 15;
-            this.button6.Text = "button6";
+            this.button6.Text = "Load image from file";
             this.button6.UseVisualStyleBackColor = true;
             this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(71, 862);
+            this.label6.Location = new System.Drawing.Point(18, 214);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(70, 25);
+            this.label6.Size = new System.Drawing.Size(0, 25);
             this.label6.TabIndex = 16;
-            this.label6.Text = "label6";
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1743, 1005);
+            this.ClientSize = new System.Drawing.Size(1750, 1011);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.button6);
             this.Controls.Add(this.button5);

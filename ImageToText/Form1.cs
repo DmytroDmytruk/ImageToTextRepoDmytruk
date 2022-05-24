@@ -227,15 +227,32 @@ namespace ImageToText
             int size = ii * jj;
             var char_text = new string[size];
             int counter = 0;
+            bool isHorizontal = comboBox2.SelectedIndex == 0;
 
-            for (int i = 0; i < ii; i++)
+            if (isHorizontal)
+            {
+                for (int i = 0; i < ii; i++)
+                {
+                    for (int j = 0; j < jj; j++)
+                    {
+                        Color color = loadedImage.GetPixel(i, j);
+                        //MessageBox.Show(color.R.ToString() + " " + color.G.ToString() + " " + color.B.ToString());
+
+                        char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                    }
+                }
+            } 
+            else
             {
                 for (int j = 0; j < jj; j++)
                 {
-                    Color color = loadedImage.GetPixel(i, j);
-                    //MessageBox.Show(color.R.ToString() + " " + color.G.ToString() + " " + color.B.ToString());
+                    for (int i = 0; i < ii; i++)
+                    {
+                        Color color = loadedImage.GetPixel(i, j);
+                        //MessageBox.Show(color.R.ToString() + " " + color.G.ToString() + " " + color.B.ToString());
 
-                    char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                        char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                    }
                 }
             }
 
