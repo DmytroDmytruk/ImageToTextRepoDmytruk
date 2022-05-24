@@ -132,6 +132,40 @@ namespace ImageToText
 
             pictureBox1.Image = bitmap;
         }
+
+        private int[] parsePixelRange(string rangeString)
+        {
+            List<int> rangeList = new List<int>();
+            string[] ranges = rangeString.Split(',');
+            string rangePattern = @"^(\d+)-(\d+)$";
+            string singularPattern = @"^\d+$";
+            Regex rangeRegex = new Regex(rangePattern);
+            Regex singularRegex = new Regex(singularPattern);
+
+            foreach (string rangeStr in ranges)
+            {
+                if (rangeRegex.IsMatch(rangeStr))
+                {
+                    string[] boundaries = rangeStr.Split('-');
+                    int start = Convert.ToInt32(boundaries[0]);
+                    int finish = Convert.ToInt32(boundaries[1]);
+
+                    for (int i = start; i <= finish; i++)
+                    {
+                        rangeList.Add(i);
+                    }
+                } 
+                else if (singularRegex.IsMatch(rangeStr))
+                {
+                    rangeList.Add(Convert.ToInt32(rangeStr));
+                }
+            }
+
+            int[] resArr = rangeList.ToArray();
+            Array.Sort(resArr);
+
+            return resArr;
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             ClearData();
