@@ -85,10 +85,17 @@ namespace ImageToText
             FileNameParsedData fileNameData = parseFileName(filename);
 
             int[,] pixelValues = new int[fileNameData.Dimensions.Width, fileNameData.Dimensions.Height];
-            string[] imageDataLines = File.ReadAllLines(filename);
-            int[] pixelValuesFromFile = Array.ConvertAll(imageDataLines[0].Split(' '), str => Convert.ToInt32(str));
+            string[] allLines = File.ReadAllLines(filename);
+            string[] imageDataLines = new string[1];
 
+            for (int i = 0; i < allLines.Length; i++)
+            {
+                imageDataLines[0] += allLines[i];
+            }
+
+            int[] pixelValuesFromFile = Array.ConvertAll(imageDataLines[0].Split(' '), str => Convert.ToInt32(str));
             int counter = 0;
+
             for (int i = 0; i < fileNameData.Dimensions.Width; i++)
             {
                 for (int j = 0; j < fileNameData.Dimensions.Height; j++)
@@ -105,7 +112,7 @@ namespace ImageToText
                 {
                     Color color;
                     int value = 
-                        (int)Math.Floor((double)(pixelValues[x, y] * maxQuantizationLevel / currentQuantizationLevel));
+                        (int)Math.Floor((double)(pixelValues[x, y] * maxQuantizationLevel / currentQuantizationLevel)) % 255;
 
                     switch (fileNameData.ColorScheme)
                     {
@@ -131,12 +138,32 @@ namespace ImageToText
             }
 
             pictureBox1.Image = bitmap;
+
+            int colorSchemeIndex = 0;
+            switch (fileNameData.ColorScheme)
+            {
+                case ColorScheme.Red:
+                    colorSchemeIndex = 0;
+                    break;
+                case ColorScheme.Green:
+                    colorSchemeIndex = 1;
+                    break;
+                case ColorScheme.Blue:
+                    colorSchemeIndex = 2;
+                    break;
+                case ColorScheme.Monochrome:
+                    colorSchemeIndex = 3;
+                    break;
+            }
+            comboBox1.SelectedIndex = colorSchemeIndex; 
+            comboBox2.SelectedIndex = fileNameData.Direction == Directions.Horizontal ? 0 : 1;
         }
 
         private int[] parsePixelRange(string rangeString)
         {
+            string withoutWhitespaces = String.Concat(rangeString.Where(c => !Char.IsWhiteSpace(c)));
             List<int> rangeList = new List<int>();
-            string[] ranges = rangeString.Split(',');
+            string[] ranges = withoutWhitespaces.Split(',');
             string rangePattern = @"^(\d+)-(\d+)$";
             string singularPattern = @"^\d+$";
             Regex rangeRegex = new Regex(rangePattern);
@@ -152,12 +179,12 @@ namespace ImageToText
 
                     for (int i = start; i <= finish; i++)
                     {
-                        rangeList.Add(i);
+                        rangeList.Add(i - 1);
                     }
                 } 
                 else if (singularRegex.IsMatch(rangeStr))
                 {
-                    rangeList.Add(Convert.ToInt32(rangeStr));
+                    rangeList.Add(Convert.ToInt32(rangeStr) - 1);
                 }
             }
 
@@ -171,13 +198,11 @@ namespace ImageToText
             ClearData();
             multiple = false;
             string imageFilesFilter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG|All files (*.*)|*.*";
-            string textFilesFilter = "Text Files(*.TXT)|*.TXT|ALL files (*.*)|*.*";
-            bool isTextFile = false;
 
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.InitialDirectory = "c:\\";
-                openFileDialog.Filter = isTextFile ? textFilesFilter : imageFilesFilter;
+                openFileDialog.Filter = imageFilesFilter;
                 openFileDialog.FilterIndex = 2;
                 openFileDialog.RestoreDirectory = true;
 
@@ -185,17 +210,12 @@ namespace ImageToText
                 {
                     if (openFileDialog.FileName != "")
                     {
-                        if (isTextFile)
-                        {
-                            loadText(openFileDialog.FileName);
-                        }
-                        else
-                        {
                             loadImage(openFileDialog.FileName);
-                        }
                     }
                 }
             }
+
+            groupBox1.Enabled = true;
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -252,39 +272,80 @@ namespace ImageToText
 
         string[] ReadImage(Bitmap loadedImage)
         {
+            bool isHorizontal = comboBox2.SelectedIndex == 0;
+            bool isSelectiveMode = radioButton2.Checked;
             int ii = loadedImage.Width;
             int jj = loadedImage.Height;
             int size = ii * jj;
             var char_text = new string[size];
             int counter = 0;
-            bool isHorizontal = comboBox2.SelectedIndex == 0;
 
-            if (isHorizontal)
+            if (isSelectiveMode)
             {
-                for (int i = 0; i < ii; i++)
-                {
-                    for (int j = 0; j < jj; j++)
-                    {
-                        Color color = loadedImage.GetPixel(i, j);
+                int[] indexes = parsePixelRange(textBox2.Text);
 
-                        char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                if (isHorizontal)
+                {
+                    size = indexes.Length * jj;
+                    Array.Resize(ref char_text, size);
+
+                    for (int i = 0; i < indexes.Length; i++)
+                    {
+                        for (int j = 0; j < jj; j++)
+                        {
+                            Color color = loadedImage.GetPixel(indexes[i], j);
+
+                            char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                        }
+                    }
+                }
+                else
+                {
+                    size = ii * indexes.Length;
+                    Array.Resize(ref char_text, size);
+
+                    for (int j = 0; j < indexes.Length; j++)
+                    {
+                        for (int i = 0; i < ii; i++)
+                        {
+                            Color color = loadedImage.GetPixel(i, indexes[j]);
+
+                            char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                        }
                     }
                 }
             } 
             else
             {
-                for (int j = 0; j < jj; j++)
+                size = ii * jj;
+                Array.Resize(ref char_text, size);
+
+                if (isHorizontal)
                 {
                     for (int i = 0; i < ii; i++)
                     {
-                        Color color = loadedImage.GetPixel(i, j);
+                        for (int j = 0; j < jj; j++)
+                        {
+                            Color color = loadedImage.GetPixel(i, j);
 
-                        char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                            char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                        }
+                    }
+                }
+                else
+                {
+                    for (int j = 0; j < jj; j++)
+                    {
+                        for (int i = 0; i < ii; i++)
+                        {
+                            Color color = loadedImage.GetPixel(i, j);
+
+                            char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
+                        }
                     }
                 }
             }
 
-            Console.WriteLine(counter.ToString());
             return char_text;
         }
 
@@ -435,10 +496,12 @@ namespace ImageToText
             // FileName_H/V_WxH.txt
             // FileName_H/V_R/G/B/M_WxH.txt
             bool isHorizontal = comboBox2.SelectedIndex == 0;
+            bool isSelectiveMode = radioButton2.Checked;
+            int[] ranges = parsePixelRange(textBox2.Text);
+            int width = isSelectiveMode && isHorizontal ? ranges.Length : loadedImage.Width;
+            int height = isSelectiveMode && !isHorizontal ? ranges.Length : loadedImage.Height;
+            string dimensionsString = isHorizontal ? $"{width}x{height}" : $"{height}x{width}";
             string directionString = isHorizontal ? "H" : "V";
-            string dimensionsString = isHorizontal 
-                ? $"{loadedImage.Width}x{loadedImage.Height}" 
-                : $"{loadedImage.Height}x{loadedImage.Width}";
             string colorSchema = colorSchemeComboBoxParser(comboBox1.SelectedIndex);
 
             return $"{filename}_{directionString}_{colorSchema}_{dimensionsString}.txt";
@@ -520,6 +583,10 @@ namespace ImageToText
             text = "";
             textList.Clear();
             textNames.Clear();
+            groupBox1.Enabled = false;
+            textBox2.Text = "";
+            radioButton1.Checked = true;
+            radioButton2.Checked = false;
         }
 
         private void button6_Click(object sender, EventArgs e)
@@ -552,6 +619,41 @@ namespace ImageToText
                     }
                 }
             }
+        }
+
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+            textBox2.Enabled = true;
+        }
+
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+            textBox2.Enabled = false;
+        }
+
+        private void flowLayoutPanel1_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void panel3_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
