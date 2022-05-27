@@ -1,0 +1,12 @@
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\bin\x86\Release\ImageToText.exe.config
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\bin\x86\Release\ImageToText.exe
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\bin\x86\Release\ImageToText.pdb
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.csproj.AssemblyReference.cache
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.csproj.SuggestedBindingRedirects.cache
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.Form1.resources
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.Properties.Resources.resources
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.TextForm.resources
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.csproj.GenerateResource.cache
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.csproj.CoreCompileInputs.cache
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.exe
+C:\Users\Denys\Desktop\+5ImageToText2022.02\+ImageToText\+ImageToTextRepo\ImageToText\obj\x86\Release\ImageToText.pdb

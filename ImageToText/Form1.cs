@@ -37,7 +37,7 @@ namespace ImageToText
             public Directions Direction { get; set; }
             public ColorScheme ColorScheme { get; set; }
             public Dimensions Dimensions { get; set; }
-
+            public int QuantizationLevels { get; set; }
         };
 
         string text;
@@ -57,14 +57,14 @@ namespace ImageToText
             loadedImage = new Bitmap(filename);
 
             pictureBox1.Image = loadedImage;
-            button2.Enabled = true;
+            enableBuildTextButton();
             label6.Text = Path.GetFileNameWithoutExtension(filename);
         }
         private FileNameParsedData parseFileName(string filename)
         {
             // FileName_H/V_WxH.txt
             // FileName_H/V_R/G/B/M_WxH.txt
-            string pattern = @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<width>\d+)x{1}(?<height>\d+)";
+            string pattern = @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<bits>\d+)_(?<width>\d+)x{1}(?<height>\d+)";
             Regex regex = new Regex(pattern);
             Match match = regex.Match(filename);
 
@@ -77,6 +77,7 @@ namespace ImageToText
             parsedDimensions.Width = Convert.ToInt32(match.Groups["width"].Value);
             parsedDimensions.Height = Convert.ToInt32(match.Groups["height"].Value);
             parsedData.Dimensions = parsedDimensions;
+            parsedData.QuantizationLevels = Convert.ToInt32(Math.Log(Convert.ToDouble(match.Groups["bits"].Value), 2));
 
             return parsedData;
         }
@@ -157,6 +158,8 @@ namespace ImageToText
             }
             comboBox1.SelectedIndex = colorSchemeIndex; 
             comboBox2.SelectedIndex = fileNameData.Direction == Directions.Horizontal ? 0 : 1;
+            numericUpDown1.Value = fileNameData.QuantizationLevels;
+            label6.Text = filename;
         }
 
         private int[] parsePixelRange(string rangeString)
@@ -266,7 +269,7 @@ namespace ImageToText
             var char_text = new string[size];
             int counter = 0;
 
-            if (isSelectiveMode)
+            if (isSelectiveMode && textBox2.Text.Length > 0)
             {
                 int[] indexes = parsePixelRange(textBox2.Text);
 
@@ -396,17 +399,19 @@ namespace ImageToText
         private string buildFileName(string filename)
         {
             // FileName_H/V_WxH.txt
-            // FileName_H/V_R/G/B/M_WxH.txt
+            // FileName_H/V_R/G/B/M_bit_WxH.txt
             bool isHorizontal = comboBox2.SelectedIndex == 0;
             bool isSelectiveMode = radioButton2.Checked;
             int[] ranges = parsePixelRange(textBox2.Text);
             int width = isSelectiveMode && isHorizontal ? ranges.Length : loadedImage.Width;
             int height = isSelectiveMode && !isHorizontal ? ranges.Length : loadedImage.Height;
+            int bits = (int)Math.Pow(2, Convert.ToInt32(numericUpDown1.Value));
             string dimensionsString = isHorizontal ? $"{width}x{height}" : $"{height}x{width}";
             string directionString = isHorizontal ? "H" : "V";
             string colorSchema = colorSchemeComboBoxParser(comboBox1.SelectedIndex);
+            string selectiveModeSuffix = isSelectiveMode ? "_({ textBox2.Text})" : "";
 
-            return $"{filename}_{directionString}_{colorSchema}_{dimensionsString}.txt";
+            return $"{filename}_{directionString}_{colorSchema}_{bits}_{dimensionsString}{selectiveModeSuffix}.txt";
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -453,30 +458,6 @@ namespace ImageToText
 
         }
 
-        private void button5_Click(object sender, EventArgs e)
-        {
-            ClearData();
-            multiple = true;
-            using (FolderBrowserDialog folderBrowserDialog1 = new FolderBrowserDialog())
-            {
-                if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
-                {
-                    var folder = folderBrowserDialog1.SelectedPath;
-
-                    foreach (var file in Directory.GetFiles(folder))
-                    {
-                        textNames.Add(Path.GetFileNameWithoutExtension(file));
-                        if (Path.GetExtension(file) == ".jpg" || Path.GetExtension(file) == ".bmp" || Path.GetExtension(file) == ".png")
-                        {
-                            loadedImageList.Add(new Bitmap(file));
-                        }
-                    }
-                }
-            }
-            button2.Enabled = true;
-            button3.Enabled = false;
-        }
-
         void ClearData()
         {
             loadedImageList.Clear();
@@ -489,6 +470,7 @@ namespace ImageToText
             textBox2.Text = "";
             radioButton1.Checked = true;
             radioButton2.Checked = false;
+            button5.Enabled = false;
         }
 
         private void button6_Click(object sender, EventArgs e)
@@ -497,14 +479,12 @@ namespace ImageToText
 
             ClearData();
             multiple = false;
-            string imageFilesFilter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG|All files (*.*)|*.*";
-            string textFilesFilter = "Text Files(*.TXT)|*.TXT|ALL files (*.*)|*.*";
-            bool isTextFile = true;
+            string textFilesFilter = "Text Files(*.TXT)|*.TXT";
 
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
                 openFileDialog.InitialDirectory = "c:\\";
-                openFileDialog.Filter = isTextFile ? textFilesFilter : imageFilesFilter;
+                openFileDialog.Filter = textFilesFilter;
                 openFileDialog.FilterIndex = 2;
                 openFileDialog.RestoreDirectory = true;
 
@@ -512,17 +492,11 @@ namespace ImageToText
                 {
                     if (openFileDialog.FileName != "")
                     {
-                        if (isTextFile)
-                        {
-                            loadText(openFileDialog.FileName);
-                        }
-                        else
-                        {
-                            loadImage(openFileDialog.FileName);
-                        }
+                        loadText(openFileDialog.FileName);
                     }
                 }
             }
+            button5.Enabled = true;
         }
 
         private void radioButton2_CheckedChanged(object sender, EventArgs e)
@@ -580,6 +554,22 @@ namespace ImageToText
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             CalculateCurrentQuantizationLevel();
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            using (SaveFileDialog dialog = new SaveFileDialog())
+            {
+                dialog.Filter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG|All files (*.*)|*.*";
+                dialog.Title = "Save an Image File";
+                dialog.FileName = label6.Text.Replace(".txt", "");
+                dialog.ShowDialog();
+
+                if (dialog.FileName != "")
+                {
+                    pictureBox1.Image.Save(dialog.FileName);
+                }
+            }
         }
     }
 }
