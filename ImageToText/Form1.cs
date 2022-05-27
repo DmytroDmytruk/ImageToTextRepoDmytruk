@@ -200,7 +200,7 @@ namespace ImageToText
         {
             ClearData();
             multiple = false;
-            string imageFilesFilter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG|All files (*.*)|*.*";
+            string imageFilesFilter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG";
 
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
@@ -560,7 +560,7 @@ namespace ImageToText
         {
             using (SaveFileDialog dialog = new SaveFileDialog())
             {
-                dialog.Filter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG|All files (*.*)|*.*";
+                dialog.Filter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG";
                 dialog.Title = "Save an Image File";
                 dialog.FileName = label6.Text.Replace(".txt", "");
                 dialog.ShowDialog();
