@@ -560,15 +560,36 @@ namespace ImageToText
         {
             using (SaveFileDialog dialog = new SaveFileDialog())
             {
-                dialog.Filter = "Image Files(*.BMP;*.JPG;*.PNG)|*.BMP;*.JPG;*.PNG";
+                dialog.Filter = "Raster Image(*.JPG)|*.jpg*|Vector image(*.PNG)|*.png|Bitmap (*.BMP)|*.bmp";
                 dialog.Title = "Save an Image File";
                 dialog.FileName = label6.Text.Replace(".txt", "");
-                dialog.ShowDialog();
-
-                if (dialog.FileName != "")
+                ImageFormat savedImageFormat = ImageFormat.Jpeg;
+                if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    pictureBox1.Image.Save(dialog.FileName);
+                    string extension = Path.GetExtension(dialog.FileName);
+                    
+                    switch(extension)
+                    {
+                        case ".jpg":
+                            savedImageFormat = ImageFormat.Jpeg;
+                            break;
+                        case ".png":
+                            savedImageFormat = ImageFormat.Png;
+                            break;
+                        case ".bmp":
+                            savedImageFormat = ImageFormat.Bmp;
+                            break;
+                        default:
+                            savedImageFormat = ImageFormat.Jpeg;
+                            break;
+                    }
+
+                    if (dialog.FileName != "")
+                    {
+                        pictureBox1.Image.Save(dialog.FileName, savedImageFormat);
+                    }
                 }
+
             }
         }
     }
