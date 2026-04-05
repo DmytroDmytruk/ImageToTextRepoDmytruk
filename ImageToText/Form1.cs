@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
-using System.Text;
 using System.IO;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Linq;
 using System.Text.RegularExpressions;
-using System.Windows.Controls;
+using System.Windows.Forms;
 
 namespace ImageToText
 {
     public partial class Form1 : Form
     {
+        static readonly Regex TextFileNameRegex = new Regex(
+            @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<bits>\d+)_(?<width>\d+)x{1}(?<height>\d+)",
+            RegexOptions.Compiled);
+
         Bitmap loadedImage;
         List<Bitmap> loadedImageList = new List<Bitmap>();
         List<string> textList = new List<string>();
@@ -25,7 +24,7 @@ namespace ImageToText
         int currentQuantizationLevel = 16;
 
         public enum Directions { Horizontal = 'H', Vertical = 'V' };
-        public enum ColorScheme { Red = 'R', Green = 'G', Blue = 'B', Monochrome = 'M'};
+        public enum ColorScheme { Red = 'R', Green = 'G', Blue = 'B', Monochrome = 'M' };
         public struct Dimensions
         {
             public int Width { get; set; }
@@ -52,6 +51,14 @@ namespace ImageToText
             comboBox2.SelectedIndex = 0;
             CalculateMaxQuantizationLevel();
         }
+
+        private Bitmap GetCurrentRasterBitmap()
+        {
+            if (loadedImage != null)
+                return loadedImage;
+            return pictureBox1.Image as Bitmap;
+        }
+
         private void loadImage(string filename)
         {
             loadedImage = new Bitmap(filename);
@@ -60,49 +67,67 @@ namespace ImageToText
             enableBuildTextButton();
             label6.Text = Path.GetFileNameWithoutExtension(filename);
         }
+
+        private bool TryParseFileName(string filename, out FileNameParsedData parsedData)
+        {
+            parsedData = default(FileNameParsedData);
+            Match match = TextFileNameRegex.Match(filename);
+            if (!match.Success)
+                return false;
+
+            try
+            {
+                parsedData.Name = match.Groups["name"].Value;
+                parsedData.Direction = (Directions)Convert.ToChar(match.Groups["direction"].Value);
+                parsedData.ColorScheme = (ColorScheme)Convert.ToChar(match.Groups["color"].Value);
+                parsedData.Dimensions = new Dimensions
+                {
+                    Width = Convert.ToInt32(match.Groups["width"].Value),
+                    Height = Convert.ToInt32(match.Groups["height"].Value)
+                };
+                parsedData.QuantizationLevels = Convert.ToInt32(Math.Log(Convert.ToDouble(match.Groups["bits"].Value), 2));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         private FileNameParsedData parseFileName(string filename)
         {
-            // FileName_H/V_WxH.txt
-            // FileName_H/V_R/G/B/M_WxH.txt
-            string pattern = @"(?<name>\w+)_(?<direction>H|V)_(?<color>[RGBM]{1})_(?<bits>\d+)_(?<width>\d+)x{1}(?<height>\d+)";
-            Regex regex = new Regex(pattern);
-            Match match = regex.Match(filename);
-
-            FileNameParsedData parsedData = new FileNameParsedData();
-            parsedData.Name = match.Groups["name"].Value;
-            parsedData.Direction = (Directions)Convert.ToChar(match.Groups["direction"].Value);
-            parsedData.ColorScheme = (ColorScheme)Convert.ToChar(match.Groups["color"].Value);
-
-            Dimensions parsedDimensions = new Dimensions();
-            parsedDimensions.Width = Convert.ToInt32(match.Groups["width"].Value);
-            parsedDimensions.Height = Convert.ToInt32(match.Groups["height"].Value);
-            parsedData.Dimensions = parsedDimensions;
-            parsedData.QuantizationLevels = Convert.ToInt32(Math.Log(Convert.ToDouble(match.Groups["bits"].Value), 2));
-
+            if (!TryParseFileName(filename, out FileNameParsedData parsedData))
+                throw new FormatException("Invalid text file name format.");
             return parsedData;
         }
-        private void loadText(string filename)
+
+        private Bitmap CreateBitmapFromParsedData(FileNameParsedData fileNameData, string fullPath)
         {
-            FileNameParsedData fileNameData = parseFileName(filename);
+            CalculateMaxQuantizationLevel();
+            int fileQuantLevel = (int)Math.Round(Math.Pow(2, fileNameData.QuantizationLevels));
+            if (fileQuantLevel > maxQuantizationLevel)
+                fileQuantLevel = maxQuantizationLevel;
+            if (fileQuantLevel < 1)
+                fileQuantLevel = 1;
 
             int[,] pixelValues = new int[fileNameData.Dimensions.Width, fileNameData.Dimensions.Height];
-            string[] allLines = File.ReadAllLines(filename);
-            string[] imageDataLines = new string[1];
-
+            string[] allLines = File.ReadAllLines(fullPath);
+            var sb = new System.Text.StringBuilder();
             for (int i = 0; i < allLines.Length; i++)
-            {
-                imageDataLines[0] += allLines[i];
-            }
+                sb.Append(allLines[i]);
 
-            int[] pixelValuesFromFile = Array.ConvertAll(imageDataLines[0].Split(' '), str => Convert.ToInt32(str));
+            string[] tokens = sb.ToString().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            int expected = fileNameData.Dimensions.Width * fileNameData.Dimensions.Height;
+            if (tokens.Length != expected)
+                throw new InvalidDataException($"Expected {expected} pixel values, found {tokens.Length}.");
+
+            int[] pixelValuesFromFile = Array.ConvertAll(tokens, str => Convert.ToInt32(str));
             int counter = 0;
 
             for (int i = 0; i < fileNameData.Dimensions.Width; i++)
             {
                 for (int j = 0; j < fileNameData.Dimensions.Height; j++)
-                {
                     pixelValues[i, j] = pixelValuesFromFile[counter++];
-                }
             }
 
             Bitmap bitmap = new Bitmap(fileNameData.Dimensions.Width, fileNameData.Dimensions.Height);
@@ -112,8 +137,8 @@ namespace ImageToText
                 for (int y = 0; y < fileNameData.Dimensions.Height; y++)
                 {
                     Color color;
-                    int value = 
-                        (int)Math.Floor((double)(pixelValues[x, y] * maxQuantizationLevel / currentQuantizationLevel)) % 255;
+                    int value =
+                        (int)Math.Floor((double)(pixelValues[x, y] * maxQuantizationLevel / fileQuantLevel)) % 255;
 
                     switch (fileNameData.ColorScheme)
                     {
@@ -138,7 +163,20 @@ namespace ImageToText
                 }
             }
 
+            return bitmap;
+        }
+
+        private void loadText(string filename)
+        {
+            string shortName = Path.GetFileName(filename);
+            FileNameParsedData fileNameData = parseFileName(shortName);
+            Bitmap bitmap = CreateBitmapFromParsedData(fileNameData, filename);
+
+            var oldImg = pictureBox1.Image;
             pictureBox1.Image = bitmap;
+            loadedImage = bitmap;
+            if (oldImg != null && !ReferenceEquals(oldImg, bitmap))
+                oldImg.Dispose();
 
             int colorSchemeIndex = 0;
             switch (fileNameData.ColorScheme)
@@ -156,7 +194,7 @@ namespace ImageToText
                     colorSchemeIndex = 3;
                     break;
             }
-            comboBox1.SelectedIndex = colorSchemeIndex; 
+            comboBox1.SelectedIndex = colorSchemeIndex;
             comboBox2.SelectedIndex = fileNameData.Direction == Directions.Horizontal ? 0 : 1;
             numericUpDown1.Value = fileNameData.QuantizationLevels;
             label6.Text = filename;
@@ -184,7 +222,7 @@ namespace ImageToText
                     {
                         rangeList.Add(i - 1);
                     }
-                } 
+                }
                 else if (singularRegex.IsMatch(rangeStr))
                 {
                     rangeList.Add(Convert.ToInt32(rangeStr) - 1);
@@ -196,6 +234,7 @@ namespace ImageToText
 
             return resArr;
         }
+
         private void button1_Click(object sender, EventArgs e)
         {
             ClearData();
@@ -213,7 +252,7 @@ namespace ImageToText
                 {
                     if (openFileDialog.FileName != "")
                     {
-                            loadImage(openFileDialog.FileName);
+                        loadImage(openFileDialog.FileName);
                     }
                 }
             }
@@ -252,19 +291,26 @@ namespace ImageToText
         {
             CalculateCurrentQuantizationLevel();
         }
-        
+
         private void button2_Click(object sender, EventArgs e)
         {
-            text = String.Join(" ", ReadImage(loadedImage));
+            Bitmap bmp = GetCurrentRasterBitmap();
+            if (bmp == null)
+            {
+                MessageBox.Show("No image is loaded.");
+                return;
+            }
+
+            text = String.Join(" ", ReadImage(bmp));
             enableTextOptions();
         }
 
-        string[] ReadImage(Bitmap loadedImage)
+        string[] ReadImage(Bitmap sourceBitmap)
         {
             bool isHorizontal = comboBox2.SelectedIndex == 0;
             bool isSelectiveMode = radioButton2.Checked;
-            int ii = loadedImage.Width;
-            int jj = loadedImage.Height;
+            int ii = sourceBitmap.Width;
+            int jj = sourceBitmap.Height;
             int size = ii * jj;
             var char_text = new string[size];
             int counter = 0;
@@ -282,7 +328,7 @@ namespace ImageToText
                     {
                         for (int j = 0; j < jj; j++)
                         {
-                            Color color = loadedImage.GetPixel(indexes[i], j);
+                            Color color = sourceBitmap.GetPixel(indexes[i], j);
 
                             char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
                         }
@@ -297,13 +343,13 @@ namespace ImageToText
                     {
                         for (int i = 0; i < ii; i++)
                         {
-                            Color color = loadedImage.GetPixel(i, indexes[j]);
+                            Color color = sourceBitmap.GetPixel(i, indexes[j]);
 
                             char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
                         }
                     }
                 }
-            } 
+            }
             else
             {
                 size = ii * jj;
@@ -315,7 +361,7 @@ namespace ImageToText
                     {
                         for (int j = 0; j < jj; j++)
                         {
-                            Color color = loadedImage.GetPixel(i, j);
+                            Color color = sourceBitmap.GetPixel(i, j);
 
                             char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
                         }
@@ -327,7 +373,7 @@ namespace ImageToText
                     {
                         for (int i = 0; i < ii; i++)
                         {
-                            Color color = loadedImage.GetPixel(i, j);
+                            Color color = sourceBitmap.GetPixel(i, j);
 
                             char_text[counter++] = GetPixel(color.R, color.G, color.B, comboBox1.SelectedIndex);
                         }
@@ -341,7 +387,7 @@ namespace ImageToText
         private string GetPixel(byte r, byte g, byte b, int value)
         {
             double pixel_value = 0d;
-            switch(value)
+            switch (value)
             {
                 case 0:
                     {
@@ -371,9 +417,16 @@ namespace ImageToText
 
         private void button3_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(text))
+            {
+                MessageBox.Show("No text to show. Use Build Text first.");
+                return;
+            }
+
             TextForm text_form = new TextForm(text);
             text_form.Show();
         }
+
         private string colorSchemeComboBoxParser(int activeIndex)
         {
             string colorSchema = "";
@@ -396,15 +449,19 @@ namespace ImageToText
 
             return colorSchema;
         }
+
         private string buildFileName(string filename)
         {
             // FileName_H/V_WxH.txt
-            // FileName_H/V_R/G/B/M_bit_WxH.txt
+            // FileName_H/V_R/G/B/M_WxH.txt
             bool isHorizontal = comboBox2.SelectedIndex == 0;
             bool isSelectiveMode = radioButton2.Checked;
             int[] ranges = parsePixelRange(textBox2.Text);
-            int width = isSelectiveMode && isHorizontal ? ranges.Length : loadedImage.Width;
-            int height = isSelectiveMode && !isHorizontal ? ranges.Length : loadedImage.Height;
+            Bitmap dimsBmp = GetCurrentRasterBitmap();
+            if (dimsBmp == null)
+                throw new InvalidOperationException("No image loaded.");
+            int width = isSelectiveMode && isHorizontal ? ranges.Length : dimsBmp.Width;
+            int height = isSelectiveMode && !isHorizontal ? ranges.Length : dimsBmp.Height;
             int bits = (int)Math.Pow(2, Convert.ToInt32(numericUpDown1.Value));
             string dimensionsString = isHorizontal ? $"{width}x{height}" : $"{height}x{width}";
             string directionString = isHorizontal ? "H" : "V";
@@ -567,8 +624,8 @@ namespace ImageToText
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     string extension = Path.GetExtension(dialog.FileName);
-                    
-                    switch(extension)
+
+                    switch (extension)
                     {
                         case ".jpg":
                             savedImageFormat = ImageFormat.Jpeg;
@@ -590,6 +647,142 @@ namespace ImageToText
                     }
                 }
 
+            }
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            using (var folderBrowserDialog = new FolderBrowserDialog())
+            {
+                if (folderBrowserDialog.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(folderBrowserDialog.SelectedPath))
+                    return;
+
+                var folder = folderBrowserDialog.SelectedPath;
+                var textsFolder = Path.Combine(folder, "texts");
+                Directory.CreateDirectory(textsFolder);
+
+                var allowedExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".bmp", ".jpg", ".jpeg", ".png" };
+
+                var files = Directory.EnumerateFiles(folder, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(f => allowedExt.Contains(Path.GetExtension(f)))
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (files.Count == 0)
+                {
+                    MessageBox.Show("No images found in selected folder.");
+                    return;
+                }
+
+                var prevCursor = Cursor;
+                Cursor = Cursors.WaitCursor;
+                button7.Enabled = false;
+
+                try
+                {
+                    foreach (var file in files)
+                    {
+                        Bitmap nextBmp = new Bitmap(file);
+                        Image oldImg = pictureBox1.Image;
+                        loadedImage = nextBmp;
+                        pictureBox1.Image = nextBmp;
+                        if (oldImg != null && !ReferenceEquals(oldImg, nextBmp))
+                            oldImg.Dispose();
+
+                        label6.Text = Path.GetFileNameWithoutExtension(file);
+
+                        var currentText = String.Join(" ", ReadImage(nextBmp));
+                        text = currentText;
+                        var outFileName = buildFileName(label6.Text);
+                        var outPath = Path.Combine(textsFolder, outFileName);
+
+                        File.WriteAllText(outPath, currentText);
+                    }
+
+                    enableTextOptions();
+                    MessageBox.Show("Folder processing completed.");
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    button7.Enabled = true;
+                    Cursor = prevCursor;
+                }
+            }
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            using (var folderBrowserDialog = new FolderBrowserDialog())
+            {
+                if (folderBrowserDialog.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(folderBrowserDialog.SelectedPath))
+                    return;
+
+                var folder = folderBrowserDialog.SelectedPath;
+                var imagesFolder = Path.Combine(folder, "images");
+                Directory.CreateDirectory(imagesFolder);
+
+                var files = Directory.EnumerateFiles(folder, "*.txt", SearchOption.TopDirectoryOnly)
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (files.Count == 0)
+                {
+                    MessageBox.Show("No text files found in selected folder.");
+                    return;
+                }
+
+                var prevCursor = Cursor;
+                Cursor = Cursors.WaitCursor;
+                button8.Enabled = false;
+
+                int ok = 0;
+                int skipped = 0;
+
+                try
+                {
+                    foreach (var file in files)
+                    {
+                        string nameOnly = Path.GetFileName(file);
+                        if (!TryParseFileName(nameOnly, out FileNameParsedData meta))
+                        {
+                            skipped++;
+                            continue;
+                        }
+
+                        Bitmap bmp = CreateBitmapFromParsedData(meta, file);
+                        var outPath = Path.Combine(imagesFolder, Path.GetFileNameWithoutExtension(nameOnly) + ".png");
+                        bmp.Save(outPath, ImageFormat.Png);
+
+                        ok++;
+                        Image oldImg = pictureBox1.Image;
+                        pictureBox1.Image = bmp;
+                        loadedImage = bmp;
+                        if (oldImg != null && !ReferenceEquals(oldImg, bmp))
+                            oldImg.Dispose();
+
+                        label6.Text = Path.GetFileNameWithoutExtension(nameOnly);
+                    }
+
+                    if (ok > 0)
+                        button5.Enabled = true;
+                    string msg = $"Folder processing completed. Images saved to:\n{imagesFolder}\n\nConverted: {ok}";
+                    if (skipped > 0)
+                        msg += $"\nSkipped (invalid name): {skipped}";
+                    MessageBox.Show(msg);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    button8.Enabled = true;
+                    Cursor = prevCursor;
+                }
             }
         }
     }

@@ -15,7 +15,7 @@ namespace ImageToText
         public TextForm(string text)
         {
             InitializeComponent();
-            richTextBox1.Text = text.ToString();
+            richTextBox1.Text = text ?? string.Empty;
         }
 
         private void TextForm_Load(object sender, EventArgs e)

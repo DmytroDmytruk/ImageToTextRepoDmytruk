@@ -53,6 +53,8 @@
             this.button5 = new System.Windows.Forms.Button();
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.button6 = new System.Windows.Forms.Button();
+            this.button7 = new System.Windows.Forms.Button();
+            this.button8 = new System.Windows.Forms.Button();
             this.panel4 = new System.Windows.Forms.Panel();
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.tableLayoutPanel3 = new System.Windows.Forms.TableLayoutPanel();
@@ -273,11 +275,13 @@
             this.panel3.Controls.Add(this.tableLayoutPanel2);
             this.panel3.Controls.Add(this.groupBox1);
             this.panel3.Controls.Add(this.panel1);
+            this.panel3.Controls.Add(this.button7);
+            this.panel3.Controls.Add(this.button8);
             this.panel3.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel3.Location = new System.Drawing.Point(3, 3);
             this.panel3.Name = "panel3";
             this.panel3.Padding = new System.Windows.Forms.Padding(15);
-            this.panel3.Size = new System.Drawing.Size(376, 923);
+            this.panel3.Size = new System.Drawing.Size(376, 1011);
             this.panel3.TabIndex = 23;
             this.panel3.Paint += new System.Windows.Forms.PaintEventHandler(this.panel3_Paint);
             // 
@@ -396,6 +400,28 @@
             this.button6.UseVisualStyleBackColor = true;
             this.button6.Click += new System.EventHandler(this.button6_Click);
             // 
+            // button7
+            // 
+            this.button7.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.button7.Location = new System.Drawing.Point(15, 846);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(346, 44);
+            this.button7.TabIndex = 19;
+            this.button7.Text = "ProcessFolder (image -> text)";
+            this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
+            // 
+            // button8
+            // 
+            this.button8.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.button8.Location = new System.Drawing.Point(15, 802);
+            this.button8.Name = "button8";
+            this.button8.Size = new System.Drawing.Size(346, 44);
+            this.button8.TabIndex = 20;
+            this.button8.Text = "ProcessFolder (text -> image)";
+            this.button8.UseVisualStyleBackColor = true;
+            this.button8.Click += new System.EventHandler(this.button8_Click);
+            // 
             // panel4
             // 
             this.panel4.Controls.Add(this.pictureBox1);
@@ -429,18 +455,18 @@
             this.tableLayoutPanel3.Name = "tableLayoutPanel3";
             this.tableLayoutPanel3.RowCount = 1;
             this.tableLayoutPanel3.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.tableLayoutPanel3.Size = new System.Drawing.Size(1774, 929);
+            this.tableLayoutPanel3.Size = new System.Drawing.Size(1774, 1017);
             this.tableLayoutPanel3.TabIndex = 3;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1774, 929);
+            this.ClientSize = new System.Drawing.Size(1774, 1017);
             this.Controls.Add(this.tableLayoutPanel3);
             this.Controls.Add(this.label6);
-            this.MaximumSize = new System.Drawing.Size(1800, 1000);
-            this.MinimumSize = new System.Drawing.Size(1800, 1000);
+            this.MaximumSize = new System.Drawing.Size(1800, 1100);
+            this.MinimumSize = new System.Drawing.Size(1800, 1100);
             this.Name = "Form1";
             this.Text = "Form1";
             this.groupBox1.ResumeLayout(false);
@@ -494,6 +520,8 @@
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.NumericUpDown numericUpDown1;
         private System.Windows.Forms.Button button5;
+        private System.Windows.Forms.Button button7;
+        private System.Windows.Forms.Button button8;
     }
 }
 
